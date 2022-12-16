@@ -151,7 +151,6 @@
     <Compile Include="Session\GaugeSession.cs" />
     <Compile Include="Session\MoveSession.cs" />
     <Compile Include="Session\ProtectSession.cs" />
-    <Compile Include="Utils\HttpUtil.cs" />
     <Compile Include="Utils\LogUtil.cs" />
     <Compile Include="Utils\DeviceUtil.cs" />
     <Compile Include="Utils\Snowflake.cs" />

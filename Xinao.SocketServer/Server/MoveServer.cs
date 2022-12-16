@@ -253,7 +253,7 @@ namespace Xinao.SocketServer.Server
                 {
                     if (distanceOneDay >= moveSetting.move_threshold)
                     {
-                        remarks = remarks + "单日位移报警 ";
+                        remarks = remarks + "单日位移报警;";
                         isToWarn = true;
                     }             
                 }
@@ -262,7 +262,7 @@ namespace Xinao.SocketServer.Server
                 {
                     if (distance >= moveSetting.all_move_threshold)
                     {
-                        remarks = remarks + "累计位移报警 ";
+                        remarks = remarks + "累计位移报警;";
                         isToWarn = true;
                     }
                 }
@@ -300,6 +300,9 @@ namespace Xinao.SocketServer.Server
                 };
 
                 list.Add(pdd);
+
+                if (DeviceUtil.MOVE_WECHAT_ON == true && isToWarn)
+                    WechatUtil.SendMessage($"{pdd.dtu_name}-{pdd.device_name}", pdd.remarks, WechatUtil.MOVE_CODE);
             }
 
             try
@@ -320,17 +323,17 @@ namespace Xinao.SocketServer.Server
             var sessions = this.GetAllSessions();
             LogUtil.LogState($"【位移】服务状态->连接总数: {sessions.Count()} ");
 
-            var table = new ConsoleTable("No", "Dtu Code", "Dtu Name", "IP", "Start Time", "Refresh Time");
+            var table = new ConsoleTable("No", "Dtu Code",  "IP", "Start Time", "Refresh Time", "Dtu Name");
 
             int i = 1;
             foreach (var session in sessions)
             {
                 table.AddRow(i++,
                     session.DtuCode,
-                    session.DtuName,
                     $"{session.RemoteEndPoint.Address}:{session.RemoteEndPoint.Port} ",
                     session.StartTime,
-                    session.LastTimeRefreshData);
+                    session.LastTimeRefreshData,
+                    session.DtuName);
             }
 
             table.Write(Format.Alternative);

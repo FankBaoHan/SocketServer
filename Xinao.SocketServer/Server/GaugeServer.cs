@@ -294,7 +294,7 @@ namespace Xinao.SocketServer.Server
             {
                 gd.subside_data = (gaugeData.Level - session.BenchmarkLevel) - gaugeSettings.base_data;
 
-                bool yesterday2Warn = false;
+                bool yesterday2Warn = false, all2Warn = false;
                 float yesterDaySubsideData = 0f;
                 
                 //日变化报警
@@ -302,24 +302,26 @@ namespace Xinao.SocketServer.Server
                 {
                     yesterDaySubsideData = (float)(gd.subside_data - session.BaseValueYesterday);
                     if (gaugeSettings.is_to_warn == true)
-                        yesterday2Warn = Math.Abs(yesterDaySubsideData) >= (gaugeSettings.to_warn_data??0.0);
+                        yesterday2Warn = Math.Abs(yesterDaySubsideData) >= (gaugeSettings.to_warn_data ?? 0.0);      
                 }
 
                 //累计变化报警
                 if (gaugeSettings.all_is_to_warn == true)
-                    gd.is_to_warn = Math.Abs((float)gd.subside_data) >= (gaugeSettings.all_to_warn_data??0.0);
+                    all2Warn = Math.Abs((float)gd.subside_data) >= (gaugeSettings.all_to_warn_data??0.0);
 
                 var alarmComment = new StringBuilder();
+                var comment = gd.subside_data > 0?"沉降":"抬升";
 
-                if (gaugeSettings.is_to_warn == true)
-                    alarmComment.Append($"日{gd.subside_data > 0:'沉降':'抬升'}报警;");
+                if (gaugeSettings.is_to_warn == true && all2Warn)
+                    alarmComment.Append($"日{comment}报警;");
 
-                if (gaugeSettings.is_to_warn == true)
-                    alarmComment.Append($"累计{gd.subside_data > 0:'沉降':'抬升'}报警;");
+                if (gaugeSettings.is_to_warn == true && yesterday2Warn)
+                    alarmComment.Append($"累计{comment}报警;");
 
                 if (gaugeSettings.is_base == 2)
                 {
                     gd.remarks = alarmComment.ToString();
+                    gd.is_to_warn = all2Warn | yesterday2Warn;
                 }
                 else if (gaugeSettings.is_base == 1)
                 {
@@ -335,6 +337,9 @@ namespace Xinao.SocketServer.Server
             {
                 LogUtil.LogError($"【沉降】写入GaugeWarnData数据库错误->dtuId: {session.DtuId} slaveId: {gaugeData.SlaveId}");
             }
+
+            if (DeviceUtil.GAUGE_WECHAT_ON == true && gd.is_to_warn == true)
+                WechatUtil.SendMessage($"{gd.dtu_name}-{gd.gauge_name}", gd.remarks, WechatUtil.GAUGE_CODE);
         }
 
         /// <summary>
@@ -345,18 +350,18 @@ namespace Xinao.SocketServer.Server
             var sessions = this.GetAllSessions(); 
             LogUtil.LogState($"【沉降】服务状态->连接总数: {sessions.Count()} ");
 
-            var table = new ConsoleTable("No", "Dtu Code", "Dtu Name", "IP", "Start Time", "Frequency", "Refresh Time");
+            var table = new ConsoleTable("No", "Dtu Code", "IP", "Start Time", "Frequency",  "Refresh Time", "Dtu Name");
 
             int i = 1;
             foreach (var session in sessions)
             {
                 table.AddRow(i++,
                     session.DtuCode,
-                    session.DtuName,
                     $"{session.RemoteEndPoint.Address}:{session.RemoteEndPoint.Port} ",
                     session.StartTime,
                     session.Frequence,
-                    session.LastTimeRefreshData);
+                    session.LastTimeRefreshData,
+                    session.DtuName);
             }
 
             table.Write(Format.Alternative);

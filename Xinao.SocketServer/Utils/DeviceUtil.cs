@@ -21,7 +21,7 @@ namespace Xinao.SocketServer.Utils
         public static bool IS_GAUGE_DATABASE_CACHE_ON = System.Configuration.ConfigurationManager.AppSettings["gaugeDatabaseCache"].ToBoolean();//读数据库缓存延时开关
         public static int GAUGE_SEND_SLEEP_TIME = System.Configuration.ConfigurationManager.AppSettings["gaugeSendSleepTime"].ToInt32();//两包数据发送最小间隔 毫秒
         public static int GAUGE_FIRST_TIME_SEND_INTERVAL = System.Configuration.ConfigurationManager.AppSettings["gaugeFirstTimeSendInterval"].ToInt32();//首次连接重发数据间隔 秒
-
+        public static bool GAUGE_WECHAT_ON = System.Configuration.ConfigurationManager.AppSettings["gagueWechatOn"].ToBoolean();//微信公众号通知开关
 
         public static byte[] GetGaugeCmd(int? slaveId)
         {
@@ -42,6 +42,8 @@ namespace Xinao.SocketServer.Utils
         //eg: 01 04 0C 48 E8 1F 20 48 E8 1E 80 48 E8 1D E0 50 24
         public static GaugeInfo ParseGauge(GaugeInfo info, string DtuCode)
         {
+            LogUtil.LogGaugeData($"【沉降】开始解析报文->DtuCode: {DtuCode} Data: {BitConverter.ToString(info.ReadBuffer)}");
+
             info.SlaveId = info.ReadBuffer[0];
 
             info.Level = BitConverter.ToSingle(
@@ -51,7 +53,7 @@ namespace Xinao.SocketServer.Utils
             info.Pressure = BitConverter.ToSingle(
                 new byte[] { info.ReadBuffer[14], info.ReadBuffer[13], info.ReadBuffer[12], info.ReadBuffer[11] }, 0);
 
-            LogUtil.LogGaugeData($"【沉降】数据解析完成->DtuCode: {DtuCode} SlaveId: {info.SlaveId} 液位: {info.Level} 温度: {info.Temprature} 压力: {info.Pressure}");
+            LogUtil.LogGaugeData($"【沉降】报文解析完成->DtuCode: {DtuCode} SlaveId: {info.SlaveId} 液位: {info.Level} 温度: {info.Temprature} 压力: {info.Pressure}");
 
             return info;
         }
@@ -87,6 +89,9 @@ namespace Xinao.SocketServer.Utils
         //eg: 01 03 0E E0 AD E0 AD E0 AD E0 AD E0 AD E0 AD E0 AD 65 2E
         public static ProtectInfo ParseProtect(ProtectInfo info, string DtuCode)
         {
+            LogUtil.LogGaugeData($"【阴保】开始解析报文->DtuCode: {DtuCode} Data: {BitConverter.ToString(info.ReadBuffer)}");
+
+
             info.SlaveId = info.ReadBuffer[0];
 
             info.ElectricPotential = BitConverter.ToInt16(new byte[] { info.ReadBuffer[4], info.ReadBuffer[3] }, 0);
@@ -95,18 +100,19 @@ namespace Xinao.SocketServer.Utils
             info.AcInterferenceVoltage = BitConverter.ToInt16(new byte[] { info.ReadBuffer[10], info.ReadBuffer[9] }, 0);
             info.AcStrayVoltage = BitConverter.ToInt16(new byte[] { info.ReadBuffer[12], info.ReadBuffer[11] }, 0);
 
-            LogUtil.LogProtectData($"【阴保】数据解析完成(原始值)->DtuCode: {DtuCode} SlaveId: {info.SlaveId} 阴保电位: {info.ElectricPotential} 自然电位: {info.NaturePotential} 直流电流: {info.DcCurrent} 交流干扰电压: {info.AcInterferenceVoltage} 交流杂散电压: {info.AcStrayVoltage}");
+            LogUtil.LogProtectData($"【阴保】报文解析完成(原始值)->DtuCode: {DtuCode} SlaveId: {info.SlaveId} 阴保电位: {info.ElectricPotential} 自然电位: {info.NaturePotential} 直流电流: {info.DcCurrent} 交流干扰电压: {info.AcInterferenceVoltage} 交流杂散电压: {info.AcStrayVoltage}");
 
             return info;
         }
         #endregion
 
         #region 位移
-        public static int TIME_TRY_TO_CONNECT = 2;
+        public static int TIME_TRY_TO_CONNECT = 10;//尝试10次连接未验证成功后断连
         public static int MOVE_MAX_DATA_LENGTH = 64;//返回数据长度限制
         public static int MOVE_HEARTBEAT_INTERVAL = System.Configuration.ConfigurationManager.AppSettings["moveHeartBeatInterval"].ToInt32() * 1000;//设备间隔采样时间 毫秒
         public static int MOVE_REFRESH_EXPIRATION_TIME = System.Configuration.ConfigurationManager.AppSettings["moveRefreshExpirationTime"].ToInt32();//配置过期时间 秒 超过该时间 重新向数据库获取
         public static bool IS_MOVE_DATABASE_CACHE_ON = System.Configuration.ConfigurationManager.AppSettings["moveDatabaseCache"].ToBoolean();//读数据库缓存延时开关
+        public static bool MOVE_WECHAT_ON = System.Configuration.ConfigurationManager.AppSettings["moveWechatOn"].ToBoolean();//微信公众号通知开关
 
         public static string GetMoveDtuCode(string data)
         {
@@ -123,6 +129,9 @@ namespace Xinao.SocketServer.Utils
         //eg: $HUASI,GET,TMDATA,1,1,2020,04,09,18,10,29,0000,280618,3,288001,12.20,21.46,-0.142690,-0.981184,-0.130071,-246.8404,-178.3741,1365.2286,0.00,288002,8.13,21.35,0.177074,-0.976333,0.124174,-313.7042,-105.1029,874.4208,0.00,288003,10.68,22.35,-0.387279,-0.772509,0.503234,-251.6172,-193.6397,386.2544,0.00*1A
         public static List<MoveInfo> ParseMove(string data, string DtuCode)
         {
+            LogUtil.LogGaugeData($"【位移】开始解析报文->DtuCode: {DtuCode} Data: {data}");
+
+
             var list = new List<MoveInfo>();
 
             var regex = new Regex("\\$HUASI,GET,TMDATA,([^,]*,){10}(?<number>[^,]*),(?<datas>.*\\*)[A-Fa-f0-9]{2}");
@@ -175,7 +184,7 @@ namespace Xinao.SocketServer.Utils
                     DeviceAngle = float.Parse(data[9])
                 };
 
-                LogUtil.LogMoveData($"【位移】数据解析完成->DtuCode: {DtuCode} DeviceCode: {info.DeviceCode} 电压: {info.Voltage} 温度: {info.Tempratrue} 加速度XYZ: {info.DeviceXSpeed} {info.DeviceYSpeed} {info.DeviceZSpeed} 坐标XYZ: {info.DeviceXData} {info.DeviceYData} {info.DeviceZData} 旋转角: {info.DeviceAngle}");
+                LogUtil.LogMoveData($"【位移】报文解析完成->DtuCode: {DtuCode} DeviceCode: {info.DeviceCode} 电压: {info.Voltage} 温度: {info.Tempratrue} 加速度XYZ: {info.DeviceXSpeed} {info.DeviceYSpeed} {info.DeviceZSpeed} 坐标XYZ: {info.DeviceXData} {info.DeviceYData} {info.DeviceZData} 旋转角: {info.DeviceAngle}");
                 list.Add(info);
             }
 

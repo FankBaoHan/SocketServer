@@ -5,58 +5,64 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using RestSharp;
+using System.Runtime.InteropServices;
 
 namespace Xinao.SocketServer.Utils
 {
     public class WechatUtil
     {
-        private static string AccessToken = string.Empty;
+        public static string POST_URL = System.Configuration.ConfigurationManager.AppSettings["wechatUrl"];//API地址
 
-        private static DateTime RefreshTokenTime = DateTime.MinValue;
+        public static readonly short GAUGE_CODE = 1;
+        public static readonly short MOVE_CODE = 2;
 
-        private static double EXPIRE_MILLSECONDS = 1000 * 60 * 60 * 2;
-
-        private static string SendTemplateMessage(string openId, string templateId, object data, string url, string topColor = "#173177")
+        public static bool SendMessage(string title, string content, short type)
         {
-            var postUrl = string
-                .Format("https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={0}"
-                , GetAccessToken());
+            var client = new RestClient(POST_URL);
 
-            var msgData = new
+            var request = new RestRequest()
             {
-                touser = openId,
-                template_id = templateId,
-                topcolor = topColor,
-                url = url,
-                data = data
+                Method = Method.Post,
+                Timeout = 10000
             };
 
-            var postData = JsonConvert.SerializeObject(msgData);
+            request.AddHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
 
-            var result = HttpUtil.PostBody(postUrl, postData);
+            request
+                .AddParameter("title", title)
+                .AddParameter("content", content)
+                .AddParameter("date", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
+                .AddParameter("type", type.ToString());
 
-            var jb = JObject.Parse(result);
-            return jb["errcode"].ToString() == "0" ? "ok" : jb["errmsg"].ToString();
+            RestResponse response = null;
+            try
+            {
+                response = client.Execute(request);
+            }
+            catch (Exception e)
+            {
+                Log(type, $"发送微信公众号消息失败->设备信息:{title} error:{e.Message}");
+                return false;
+            }
+
+            var ro = JObject.Parse(response.Content);
+            var code = ro["code"]?.ToString();
+
+            if (code == "200")
+            {
+                Log(type, $"发送微信公众号消息完成->设备信息:{title}");
+                return true;
+            }
+
+            Log(type, $"发送微信公众号消息失败->设备信息:{title} content:{response?.Content}");
+            return false;
         }
 
-        private static string GetAccessToken()
+        private static void Log(short type, string content)
         {
-            if (string.IsNullOrEmpty(AccessToken))
-            {
-                TryRefreshToken();
-            }
-            else
-            {
-                if ((DateTime.Now - RefreshTokenTime).TotalMilliseconds >= EXPIRE_MILLSECONDS)
-                    TryRefreshToken();
-            }
-
-            return AccessToken;
-        }
-
-        private static void TryRefreshToken()
-        {
-
+            if (GAUGE_CODE == type) { LogUtil.LogMoveData($"【沉降】{content}"); }
+            if (MOVE_CODE == type) { LogUtil.LogMoveData($"【位移】{content}"); }
         }
     }
 }

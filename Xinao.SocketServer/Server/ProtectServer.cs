@@ -297,18 +297,18 @@ namespace Xinao.SocketServer.Server
             var sessions = this.GetAllSessions();
             LogUtil.LogState($"【阴保】服务状态->连接总数: {sessions.Count()} ");
 
-            var table = new ConsoleTable("No", "Dtu Code", "Dtu Name", "IP", "Start Time", "Frequency", "Refresh Time");
+            var table = new ConsoleTable("No", "Dtu Code", "IP", "Start Time", "Frequency", "Refresh Time", "Dtu Name");
 
             int i = 1;
             foreach (var session in sessions)
             {
                 table.AddRow(i++,
                     session.DtuCode,
-                    session.DtuName,
                     $"{session.RemoteEndPoint.Address}:{session.RemoteEndPoint.Port} ",
                     session.StartTime,
                     session.Frequence,
-                    session.LastTimeRefreshData);
+                    session.LastTimeRefreshData,
+                    session.DtuName);
             }
 
             table.Write(Format.Alternative);
