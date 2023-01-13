@@ -240,7 +240,7 @@ namespace Xinao.SocketServer.Server
                         break;
                     case 5:
                         data = protectData.AcStrayVoltage;
-                        comment = "交流杂散电压";
+                        comment = "交流杂散电流";
                         lowComment = "过小";
                         highComment = "过大";
                         break;
@@ -253,7 +253,7 @@ namespace Xinao.SocketServer.Server
 
                 data = data * k + b;
 
-                var isAlarm = data >= config.high_limit || data <= config.low_limit;
+                var isAlarm = config.alarm_enable == true && (data >= config.high_limit || data <= config.low_limit);
 
                 var pd = new ProtectDeviceData()
                 {
