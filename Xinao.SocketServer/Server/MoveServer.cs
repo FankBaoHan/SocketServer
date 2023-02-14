@@ -200,6 +200,7 @@ namespace Xinao.SocketServer.Server
                 return;
 
             var list = new List<AdminMoveData>();
+            var warnList = new List<BaseWarnData>();
 
             foreach(var moveSetting in moveSettings)
             {
@@ -296,14 +297,50 @@ namespace Xinao.SocketServer.Server
                     date_create = DateTime.Now.ToString("yyyy-MM-dd"),
                     gmt_create = DateTime.Now,
                     deleted = false,
-                    remarks = remarks
+                    remarks = remarks,
+
                 };
 
                 list.Add(pdd);
 
                 if (DeviceUtil.MOVE_WECHAT_ON == true && isToWarn)
                     WechatUtil.SendMessage($"{pdd.dtu_name}-{pdd.device_name}", pdd.remarks, WechatUtil.MOVE_CODE);
-            }
+
+                //统一报警表
+                if (pdd.is_to_warn == false) continue;
+
+				var alreadyWarnedToday = DbContext.DbClient.Queryable<BaseWarnData>()
+				.Where(o => o.deleted == false
+					&& o.device_id == pdd.device_id
+					&& o.alarm_type == 1
+					&& o.gmt_create != null
+					&& DateTime.Now.Date == ((DateTime)o.gmt_create).Date)
+				.Any();
+
+                // 位移固定一天至多一条普通报警
+				if (alreadyWarnedToday) continue;
+
+				var warnData = new BaseWarnData()
+                {
+                    id = Snowflake.GetUId(),
+                    device_id = pdd.device_id,
+                    device_name= pdd.device_name,
+                    device_code = pdd.device_code,
+                    c_id = pdd.id,
+                    pipeline_id = pdd.pipeline_id,
+                    pipeline_name = pdd.pipeline_name,
+                    dtu_id = pdd.dtu_id,
+                    dtu_name = pdd.dtu_name,
+                    dtu_type = 2,//位移
+                    alarm_type = 1, //正常告警
+                    alarm_content = pdd.remarks,
+                    is_deal = false,
+                    gmt_create = DateTime.Now,
+                    deleted = false,
+                };
+
+				warnList.Add(warnData);
+			}
 
             try
             {
@@ -313,7 +350,16 @@ namespace Xinao.SocketServer.Server
             {
                 LogUtil.LogError($"【位移】写入AdminMoveData数据库错误->dtuCOde: {session.DtuCode} dtuName: {session.DtuName}");
             }
-        }
+
+			try
+			{
+				if (warnList.Count > 0) DbContext.DbClient.Insertable(warnList).ExecuteCommand();
+			}
+			catch
+			{
+				LogUtil.LogError($"【位移】写入BaseWarnData数据库错误->dtuCOde: {session.DtuCode} dtuName: {session.DtuName}");
+			}
+		}
 
         /// <summary>
         /// 打印服务器状态至控制台

@@ -135,6 +135,7 @@
     <Compile Include="Database\Models\BaseMoveDevice.cs" />
     <Compile Include="Database\Models\BaseProtectDevice.cs" />
     <Compile Include="Database\Models\BaseProtectDeviceConfig.cs" />
+    <Compile Include="Database\Models\BaseWarnData.cs" />
     <Compile Include="Database\Models\ProtectDeviceData.cs" />
     <Compile Include="Filter\GaugeFilter.cs" />
     <Compile Include="Filter\MoveFilter.cs" />

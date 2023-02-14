@@ -263,7 +263,50 @@ namespace Xinao.SocketServer.Server
             {
                 LogUtil.LogError($"【沉降】写入GaugeData数据库错误->dtuId: {session.DtuId} slaveId: {gaugeData.SlaveId}");
             }
-        }
+
+            //统一报警表
+            if (gd.is_to_warn == false) return;
+
+			var alreadyWarnedToday = DbContext.DbClient.Queryable<BaseWarnData>()
+                .Where(o=>o.deleted==false
+                    && o.device_id == gd.gauge_id
+                    && o.alarm_type == 1
+                    && o.gmt_create != null 
+                    && DateTime.Now.Date == ((DateTime)o.gmt_create).Date)
+                .Any();
+
+            //若采集频率小于1天，则按实际采集数据储存
+            if (alreadyWarnedToday && session.Frequence >= 86400) return;
+			
+			var warnData = new BaseWarnData()
+			{
+				id = Snowflake.GetUId(),
+                device_id = gd.gauge_id,
+				device_name = gd.gauge_name,
+				device_code = gd.gauge_code?.ToString(),
+				c_id = gd.id,
+				pipeline_id = gd.pipeline_id,
+				pipeline_name = gd.pipeline_name,
+				dtu_id = gd.dtu_id,
+				dtu_name = gd.dtu_name,
+				dtu_type = 1,//沉降
+				alarm_type = 1, //正常告警
+				alarm_content = gd.remarks,
+				is_deal = false,
+				gmt_create = DateTime.Now,
+				deleted = false,
+			};
+
+			try
+			{
+				DbContext.DbClient.Insertable(warnData).ExecuteCommand();
+			}
+			catch
+			{
+				LogUtil.LogError($"【沉降】写入BaseWarnData数据库错误->dtuId: {session.DtuId} slaveId: {gaugeData.SlaveId}");
+			}
+
+		}
 
         /// <summary>
         /// 存报警数据

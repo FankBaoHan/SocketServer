@@ -205,6 +205,7 @@ namespace Xinao.SocketServer.Server
             }
 
             var list = new List<ProtectDeviceData>();
+            var warnList = new List<BaseWarnData>();
             
 
             foreach (var config in configs)
@@ -277,7 +278,42 @@ namespace Xinao.SocketServer.Server
                 };
 
                 list.Add(pd);
-            }
+
+                //统一报警表
+                if (pd.is_alarm == false) continue;
+
+				var alreadyWarnedToday = DbContext.DbClient.Queryable<BaseWarnData>()
+				.Where(o => o.deleted == false
+					&& o.device_id == pd.device_id
+					&& o.alarm_type == 1
+					&& o.gmt_create != null
+					&& DateTime.Now.Date == ((DateTime)o.gmt_create).Date)
+				.Any();
+
+				// 若采集频率小于1天，则按实际采集数据储存
+				if (alreadyWarnedToday && session.Frequence >= 86400) continue;
+
+				var warnData = new BaseWarnData()
+				{
+					id = Snowflake.GetUId(),
+                    device_id = pd.device_id,
+                    device_code = "1",
+                    device_name = pd.device_name,
+					c_id = pd.id,
+					pipeline_id = pd.pipeline_id,
+					pipeline_name = pd.pipeline_name,
+					dtu_id = pd.dtu_id,
+					dtu_name = pd.dtu_name,
+					dtu_type = 3,//阴保
+					alarm_type = 1, //正常告警
+					alarm_content = pd.alarm_comment,
+					is_deal = false,
+					gmt_create = DateTime.Now,
+					deleted = false,
+				};
+
+				warnList.Add(warnData);
+			}
 
             try
             {
@@ -287,7 +323,16 @@ namespace Xinao.SocketServer.Server
             {
                 LogUtil.LogError($"【阴保】写入ProtectDeviceData数据库错误->dtuId: {session.DtuId} dtuName: {session.DtuName}");
             }
-        }
+
+			try
+			{
+                if (warnList.Count > 0) DbContext.DbClient.Insertable(warnList).ExecuteCommand();
+			}
+			catch
+			{
+				LogUtil.LogError($"【阴保】写入BaseWarnData数据库错误->dtuCOde: {session.DtuCode} dtuName: {session.DtuName}");
+			}
+		}
 
         /// <summary>
         /// 打印服务器状态至控制台
