@@ -139,13 +139,13 @@ namespace Xinao.SocketServer.Session
         /// <param name="dtuId"></param>
         private void RefreshBaseValueYesterday()
         {
-            if (this.Devices.Count == 0)
+            if (this.devices.Count == 0)
                 return;
 
             var db = DbContext.DbClient;
 
             var yesterday = DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd");
-            var ids = Devices.Select(d => d.id).ToList();
+            var ids = devices.Select(d => d.id).ToList();
 
             //每组取1条
             var baseDatas = db.Queryable<AdminMoveData>()
