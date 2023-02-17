@@ -349,7 +349,7 @@ namespace Xinao.SocketServer.Server
             if (string.IsNullOrEmpty(device?.id)) return;
 
             var lastWarns = DbContext.DbClient.Queryable<BaseWarnData>()
-                .Where(o => o.id == device.id && o.is_deal == false && o.gmt_create < DateTime.Now.Date)
+                .Where(o => o.device_id == device.id && o.is_deal == false && o.gmt_create < DateTime.Now.Date)
                 .ToList();
 
             lastWarns.ForEach(o => 
