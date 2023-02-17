@@ -184,7 +184,11 @@ namespace Xinao.SocketServer.Server
             var protectData = DeviceUtil.ParseProtect(requestInfo, session.DtuCode);
             var protectSettings = session.Device;
 
-            StoreData(session, protectData, protectSettings);
+            // 清空昨日报警（处理位归零）
+            DealLastData(session);
+
+			// 存数据
+			StoreData(session, protectData, protectSettings);
         }
 
         /// <summary>
@@ -332,6 +336,36 @@ namespace Xinao.SocketServer.Server
 			{
 				LogUtil.LogError($"【阴保】写入BaseWarnData数据库错误->dtuCOde: {session.DtuCode} dtuName: {session.DtuName}");
 			}
+		}
+
+        /// <summary>
+        /// 处理昨日报警
+        /// </summary>
+        /// <param name="session"></param>
+        private void DealLastData(ProtectSession session)
+        {
+            var device = session?.Device;
+
+            if (string.IsNullOrEmpty(device?.id)) return;
+
+            var lastWarns = DbContext.DbClient.Queryable<BaseWarnData>()
+                .Where(o => o.id == device.id && o.is_deal == false && o.gmt_create < DateTime.Now.Date)
+                .ToList();
+
+            lastWarns.ForEach(o => 
+            {
+                o.is_deal = true;
+                o.gmt_deal = DateTime.Now;
+			}) ;
+
+			try
+			{
+                DbContext.DbClient.Updateable(lastWarns);
+			}
+            catch(Exception e)
+            {
+                System.Console.WriteLine(e.Message);
+            }
 		}
 
         /// <summary>
