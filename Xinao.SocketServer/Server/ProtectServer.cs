@@ -360,7 +360,7 @@ namespace Xinao.SocketServer.Server
 
 			try
 			{
-                DbContext.DbClient.Updateable(lastWarns);
+                DbContext.DbClient.Updateable(lastWarns).ExecuteCommand();
 			}
             catch(Exception e)
             {
