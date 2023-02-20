@@ -306,6 +306,9 @@ namespace Xinao.SocketServer.Server
 				LogUtil.LogError($"【沉降】写入BaseWarnData数据库错误->dtuId: {session.DtuId} slaveId: {gaugeData.SlaveId}");
 			}
 
+			// 发送微信公众号
+			if (DeviceUtil.GAUGE_WECHAT_ON == true && gd.is_to_warn == true)
+				WechatUtil.SendMessage($"{gd.dtu_name}-{gd.gauge_name}", gd.remarks, WechatUtil.GAUGE_CODE);
 		}
 
         /// <summary>
@@ -381,8 +384,9 @@ namespace Xinao.SocketServer.Server
                 LogUtil.LogError($"【沉降】写入GaugeWarnData数据库错误->dtuId: {session.DtuId} slaveId: {gaugeData.SlaveId}");
             }
 
-            if (DeviceUtil.GAUGE_WECHAT_ON == true && gd.is_to_warn == true)
-                WechatUtil.SendMessage($"{gd.dtu_name}-{gd.gauge_name}", gd.remarks, WechatUtil.GAUGE_CODE);
+            //// 发送微信公众号
+            //if (DeviceUtil.GAUGE_WECHAT_ON == true && gd.is_to_warn == true)
+            //    WechatUtil.SendMessage($"{gd.dtu_name}-{gd.gauge_name}", gd.remarks, WechatUtil.GAUGE_CODE);
         }
 
         /// <summary>

@@ -303,8 +303,8 @@ namespace Xinao.SocketServer.Server
 
                 list.Add(pdd);
 
-                if (DeviceUtil.MOVE_WECHAT_ON == true && isToWarn)
-                    WechatUtil.SendMessage($"{pdd.dtu_name}-{pdd.device_name}", pdd.remarks, WechatUtil.MOVE_CODE);
+                //if (DeviceUtil.MOVE_WECHAT_ON == true && isToWarn)
+                //    WechatUtil.SendMessage($"{pdd.dtu_name}-{pdd.device_name}", pdd.remarks, WechatUtil.MOVE_CODE);
 
                 //统一报警表
                 if (pdd.is_to_warn == false) continue;
@@ -340,9 +340,13 @@ namespace Xinao.SocketServer.Server
                 };
 
 				warnList.Add(warnData);
+
+                // 发送微信公众号
+				if (DeviceUtil.MOVE_WECHAT_ON == true && pdd.is_to_warn == true)
+				    WechatUtil.SendMessage($"{pdd.dtu_name}-{pdd.device_name}", pdd.remarks, WechatUtil.MOVE_CODE);
 			}
 
-            try
+			try
             {
                 DbContext.DbClient.Insertable(list).ExecuteCommand();
             }
